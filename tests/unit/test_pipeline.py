@@ -261,7 +261,7 @@ class TestPipelineLatency:
             nonlocal captured_report
             captured_report = report.to_dict()
 
-        p = _make_pipeline(tts=FakeTTS(n_chunks=2), on_report=on_report_cb)
+        p = _make_pipeline(tts=FakeTTS(n_chunks=2), on_report=on_report_cb, streaming=False)
         _run(p)
 
         assert captured_report is not None
@@ -300,7 +300,7 @@ class TestPipelineLatency:
             nonlocal captured_report
             captured_report = report.to_dict()
 
-        p = _make_pipeline(tts=FakeTTS(n_chunks=3), on_report=on_report_cb)
+        p = _make_pipeline(tts=FakeTTS(n_chunks=3), on_report=on_report_cb, streaming=False)
 
         # Consume only 1 chunk to trigger GeneratorExit (or just stop iterating)
         s = Session()
@@ -326,3 +326,24 @@ class TestPipelineLatency:
         p = _make_pipeline(stt=FakeSTT(transcript=""), on_report=on_report_cb)
         _run(p)
         assert captured_report is None
+
+
+class TestSentenceChunker:
+    def test_splits_on_punctuation_with_whitespace(self):
+        from vaak.pipeline import sentence_chunker
+
+        tokens = ["Hello", " world.", " How", " are", " you? ", "I", " am", " fine."]
+        sentences = list(sentence_chunker(tokens))
+        assert sentences == ["Hello world.", "How are you?", "I am fine."]
+
+    def test_yields_remainder_without_terminal_punctuation(self):
+        from vaak.pipeline import sentence_chunker
+
+        tokens = ["This is", " incomplete"]
+        sentences = list(sentence_chunker(tokens))
+        assert sentences == ["This is incomplete"]
+
+    def test_empty_token_stream(self):
+        from vaak.pipeline import sentence_chunker
+
+        assert list(sentence_chunker([])) == []
