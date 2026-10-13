@@ -23,9 +23,12 @@ from fastrtc import ReplyOnPause, Stream
 from loguru import logger
 
 from vaak.config import AgentConfig
+from vaak.interfaces import BaseLLM, BaseSTT, BaseTTS
 from vaak.llm.ollama import OllamaLLM
 from vaak.pipeline import Pipeline
 from vaak.session import Session
+from vaak.stt.faster_whisper import FasterWhisperSTT
+from vaak.stt.lang_detect import LangDetectRouter
 from vaak.stt.moonshine import MoonshineSTT
 from vaak.tts.kokoro import KokoroTTS
 
@@ -48,9 +51,9 @@ class VoiceHandler:
         self,
         config: AgentConfig,
         *,
-        _stt: MoonshineSTT | None = None,
-        _llm: OllamaLLM | None = None,
-        _tts: KokoroTTS | None = None,
+        _stt: BaseSTT | None = None,
+        _llm: BaseLLM | None = None,
+        _tts: BaseTTS | None = None,
         _session: Session | None = None,
         _pipeline: Pipeline | None = None,
     ) -> None:
@@ -145,7 +148,24 @@ def build_agent(config: AgentConfig) -> VoiceHandler:
     logger.info("Building vaak agent…")
 
     # STT
-    stt = MoonshineSTT()
+    stt: BaseSTT
+    if config.stt.backend == "faster_whisper":
+        stt = FasterWhisperSTT(
+            model_size_or_path=config.stt.faster_whisper_model,
+            compute_type=config.stt.faster_whisper_compute_type,
+            default_language=config.language,
+        )
+    elif config.stt.backend == "router":
+        stt = LangDetectRouter(
+            MoonshineSTT(),
+            FasterWhisperSTT(
+                model_size_or_path=config.stt.faster_whisper_model,
+                compute_type=config.stt.faster_whisper_compute_type,
+                default_language=config.language,
+            ),
+        )
+    else:
+        stt = MoonshineSTT()
     stt.warmup()
 
     # LLM
