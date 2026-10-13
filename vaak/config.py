@@ -24,8 +24,8 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class STTConfig(BaseModel):
-    backend: Literal["moonshine", "faster_whisper"] = "moonshine"
-    """STT backend. moonshine = English fast path; faster_whisper = multilingual."""
+    backend: Literal["moonshine", "faster_whisper", "router"] = "moonshine"
+    """STT backend. moonshine = English fast path; faster_whisper = multilingual; router = language-based routing."""
 
     faster_whisper_model: str = "small"
     """Model size for faster_whisper backend (tiny/base/small/medium/large-v3)."""

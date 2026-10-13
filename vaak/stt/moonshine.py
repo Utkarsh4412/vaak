@@ -35,12 +35,18 @@ class MoonshineSTT(BaseSTT):
     # BaseSTT implementation
     # ------------------------------------------------------------------
 
-    def transcribe(self, audio: tuple[int, object]) -> str:
+    def transcribe(
+        self,
+        audio: tuple[int, object],
+        *,
+        language: str | None = None,
+    ) -> str:
         """Transcribe *audio* to text.
 
         Args:
             audio: (sample_rate, samples) tuple. samples must be a numpy array
                    of float32 values. If it is int16, it is converted.
+            language: Ignored (Moonshine is English-only).
 
         Returns:
             Transcript string (may be empty).
