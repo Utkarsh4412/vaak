@@ -60,6 +60,30 @@ class BaseLLM(abc.ABC):
             Complete reply string.
         """
 
+    def generate_stream(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        max_tokens: int = 200,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+    ) -> Generator[str, None, None]:
+        """Yield reply tokens one at a time as they arrive.
+
+        Default implementation calls generate() and yields the full string
+        in one shot. Subclasses should override for true streaming.
+
+        Args:
+            messages: OpenAI-style message list.
+            max_tokens: Upper bound on tokens to generate.
+            temperature: Sampling temperature.
+            top_p: Nucleus sampling threshold.
+
+        Yields:
+            Token strings (fragments of the complete reply).
+        """
+        yield self.generate(messages, max_tokens=max_tokens, temperature=temperature, top_p=top_p)
+
     def warmup(self) -> None:  # noqa: B027
         """Optional: ping the backend to load the model. Called once at startup."""
 
