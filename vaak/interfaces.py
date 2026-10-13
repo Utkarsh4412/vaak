@@ -18,12 +18,13 @@ class BaseSTT(abc.ABC):
     """
 
     @abc.abstractmethod
-    def transcribe(self, audio: tuple[int, object]) -> str:
+    def transcribe(self, audio: tuple[int, object], *, language: str | None = None) -> str:
         """Convert an audio segment to a transcript string.
 
         Args:
             audio: (sample_rate, samples) tuple where samples is a numpy array
                    of shape (N,) with dtype float32, values in [-1.0, 1.0].
+            language: Optional language code hint (e.g. "hi", "mr", "en").
 
         Returns:
             Transcript string. May be empty if no speech detected.

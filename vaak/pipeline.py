@@ -149,6 +149,8 @@ class Pipeline:
                 # ----------------------------------------------------------
                 with StageTimer() as t_stt:
                     try:
+                        user_text = self._stt.transcribe(audio, language=session.language)
+                    except TypeError:
                         user_text = self._stt.transcribe(audio)
                     except Exception as exc:
                         log.error(f"STT error: {exc}")
