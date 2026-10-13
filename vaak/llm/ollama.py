@@ -1,15 +1,17 @@
 """
-vaak/llm/ollama.py — OllamaLLM adapter (non-streaming).
+vaak/llm/ollama.py — OllamaLLM adapter (blocking + streaming).
 
-Streaming will replace this blocking call. This module wraps ollama.chat() with:
+Wraps ollama.chat() with:
   - Configurable keep_alive to keep the model loaded between requests.
   - Startup warmup ping to avoid paying model-load latency on the first call.
   - One automatic retry on failure.
+  - generate_stream() for token-by-token streaming via stream=True.
 """
 
 from __future__ import annotations
 
 import time
+from collections.abc import Generator
 
 import ollama
 from loguru import logger
@@ -18,7 +20,7 @@ from vaak.interfaces import BaseLLM
 
 
 class OllamaLLM(BaseLLM):
-    """Ollama-backed LLM (non-streaming).
+    """Ollama-backed LLM with blocking and streaming modes.
 
     Args:
         model: Ollama model tag (e.g. "llama3.2:1b").
@@ -39,7 +41,7 @@ class OllamaLLM(BaseLLM):
         self._client = ollama.Client(host=ollama_host)
 
     # ------------------------------------------------------------------
-    # BaseLLM implementation
+    # BaseLLM implementation — blocking
     # ------------------------------------------------------------------
 
     def generate(
@@ -84,6 +86,52 @@ class OllamaLLM(BaseLLM):
 
         logger.error(f"OllamaLLM failed after 2 attempts: {last_exc}")
         return "I am having trouble connecting to my local LLM. Please try again later."
+
+    # ------------------------------------------------------------------
+    # BaseLLM implementation — streaming
+    # ------------------------------------------------------------------
+
+    def generate_stream(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        max_tokens: int = 200,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+    ) -> Generator[str, None, None]:
+        """Yield reply tokens one at a time via Ollama's streaming API.
+
+        On failure, yields the full error fallback string as a single token
+        so the pipeline can still produce TTS output.
+        """
+        options = {
+            "num_predict": max_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+        }
+
+        try:
+            t0 = time.perf_counter()
+            stream = self._client.chat(
+                model=self._model,
+                messages=messages,
+                options=options,
+                keep_alive=self._keep_alive,
+                stream=True,
+            )
+            token_count = 0
+            for chunk in stream:
+                token = chunk["message"]["content"]
+                if token:
+                    token_count += 1
+                    yield token
+            elapsed_ms = int((time.perf_counter() - t0) * 1000)
+            logger.debug(
+                f"OllamaLLM streamed {token_count} tokens in {elapsed_ms} ms (model={self._model})"
+            )
+        except Exception as exc:
+            logger.error(f"OllamaLLM streaming failed: {exc}")
+            yield "I am having trouble connecting to my local LLM. Please try again later."
 
     # ------------------------------------------------------------------
     # Warmup
