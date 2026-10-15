@@ -232,7 +232,7 @@ class Pipeline:
                     # Streaming pipeline: Token streaming → Chunker → TTS
                     # ------------------------------------------------------
                     def safe_tokens() -> Generator[str, None, None]:
-                        nonlocal llm_failed, llm_first_ms, llm_total_ms
+                        nonlocal llm_failed, llm_first_ms, llm_total_ms, cancelled
                         t0 = time.perf_counter()
                         first_tok = True
                         try:
@@ -255,6 +255,10 @@ class Pipeline:
                                 ]
 
                             for token in stream:
+                                if session.cancel.is_set():
+                                    log.info("Barge-in detected during LLM streaming; stopping.")
+                                    cancelled = True
+                                    break
                                 if first_tok:
                                     llm_first_ms = (time.perf_counter() - t0) * 1000.0
                                     first_tok = False
@@ -302,6 +306,9 @@ class Pipeline:
 
                                 if cancelled:
                                     break
+
+                            if session.cancel.is_set():
+                                cancelled = True
 
                             if not cancelled:
                                 completed = True

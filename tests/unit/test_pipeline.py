@@ -6,6 +6,7 @@ All tests run without loading any real model weights.
 import numpy as np
 import pytest
 
+from vaak.barge_in import BargeInController
 from vaak.interfaces import BaseLLM, BaseSTT, BaseTTS
 from vaak.pipeline import Pipeline
 from vaak.session import Session
@@ -214,6 +215,51 @@ class TestPipelineCancel:
         assert len(chunks) == 1
         # History must NOT be updated
         assert len(s.history) == 0
+
+
+def test_barge_in_stops_tts() -> None:
+    """Verify that triggering barge-in stops TTS output mid-stream."""
+    s = Session()
+    barge = BargeInController(s.cancel)
+
+    class InterruptingTTS(BaseTTS):
+        def synthesize(self, text, *, language="en"):
+            yield (24000, np.zeros(100, dtype=np.float32))
+            barge.request_cancel()
+            yield (24000, np.zeros(100, dtype=np.float32))
+            yield (24000, np.zeros(100, dtype=np.float32))
+
+    p = Pipeline(
+        stt=FakeSTT(),
+        llm=FakeLLM(),
+        tts=InterruptingTTS(),
+        system_prompt="sys",
+        streaming=False,
+    )
+    chunks = list(p.run(s, _SILENCE))
+    assert len(chunks) == 1
+    assert s.cancel.is_set()
+
+
+def test_history_unchanged_after_cancel() -> None:
+    """Verify that cancelling during TTS prevents partial response committing to history."""
+    s = Session()
+    barge = BargeInController(s.cancel)
+
+    class InterruptingTTS(BaseTTS):
+        def synthesize(self, text, *, language="en"):
+            yield (24000, np.zeros(100, dtype=np.float32))
+            barge.request_cancel()
+            yield (24000, np.zeros(100, dtype=np.float32))
+
+    p = Pipeline(
+        stt=FakeSTT(),
+        llm=FakeLLM(),
+        tts=InterruptingTTS(),
+        system_prompt="sys",
+    )
+    list(p.run(s, _SILENCE))
+    assert len(s.history) == 0
 
 
 class TestPipelineSessionIsolation:
