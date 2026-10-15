@@ -129,6 +129,13 @@ class AgentConfig(BaseModel):
 
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
+    # VAD / barge-in
+    vad_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    """Voice activity detection threshold (0.0–1.0). Higher = less sensitive."""
+
+    min_silence_ms: int = Field(default=500, ge=100, le=5000)
+    """Minimum silence duration in ms before VAD fires end-of-speech."""
+
     @model_validator(mode="after")
     def _load_system_prompt_file(self) -> AgentConfig:
         if self.system_prompt_file:

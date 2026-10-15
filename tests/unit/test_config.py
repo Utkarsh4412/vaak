@@ -27,6 +27,14 @@ class TestAgentConfigDefaults:
         cfg = AgentConfig()
         assert cfg.share is False
 
+    def test_default_vad_threshold(self):
+        cfg = AgentConfig()
+        assert cfg.vad_threshold == 0.5
+
+    def test_default_min_silence_ms(self):
+        cfg = AgentConfig()
+        assert cfg.min_silence_ms == 500
+
 
 class TestAgentConfigValidation:
     def test_invalid_language_rejected(self):
@@ -61,6 +69,18 @@ class TestAgentConfigValidation:
         with pytest.raises(ValidationError):
             AgentConfig(port=99999)
 
+    def test_vad_threshold_out_of_range(self):
+        with pytest.raises(ValidationError):
+            AgentConfig(vad_threshold=-0.1)
+        with pytest.raises(ValidationError):
+            AgentConfig(vad_threshold=1.1)
+
+    def test_min_silence_ms_out_of_range(self):
+        with pytest.raises(ValidationError):
+            AgentConfig(min_silence_ms=50)
+        with pytest.raises(ValidationError):
+            AgentConfig(min_silence_ms=6000)
+
 
 class TestAgentConfigAcceptsValid:
     def test_all_supported_languages(self):
@@ -75,6 +95,11 @@ class TestAgentConfigAcceptsValid:
     def test_faster_whisper_backend(self):
         cfg = AgentConfig(stt=STTConfig(backend="faster_whisper"))
         assert cfg.stt.backend == "faster_whisper"
+
+    def test_vad_threshold_and_min_silence_valid(self):
+        cfg = AgentConfig(vad_threshold=0.8, min_silence_ms=1000)
+        assert cfg.vad_threshold == 0.8
+        assert cfg.min_silence_ms == 1000
 
 
 class TestLoadConfig:
