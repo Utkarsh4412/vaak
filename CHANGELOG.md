@@ -10,6 +10,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Mid-reply barge-in cancellation in streaming pipeline with `is_speaking` guard.
 - `vad_threshold` and `min_silence_ms` configuration parameters passed to `ReplyOnPause`.
 - Unit and integration tests for barge-in stopping TTS and preserving history.
+- `SummarizingMemory`: periodic conversation turn summarization at configurable threshold.
+- Integrated `SummarizingMemory` into `Session` with backwards-compatible history interface.
+- Automatic Hinglish (`hi-en`) prompt injection for conversational bilingual responses.
+- Language mapping resolution for Hindi and Hinglish TTS voices.
+- End-to-end integration tests for multilingual Hindi and Hinglish pipeline turns.
 
 ## [0.1.0] - 2026-10-10
 
