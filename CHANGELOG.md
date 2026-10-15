@@ -5,6 +5,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+### Added
+- `BargeInController`: thread-safe coordinator for mid-reply cancellation.
+- Mid-reply barge-in cancellation in streaming pipeline with `is_speaking` guard.
+- `vad_threshold` and `min_silence_ms` configuration parameters passed to `ReplyOnPause`.
+- Unit and integration tests for barge-in stopping TTS and preserving history.
+
 ## [0.1.0] - 2026-10-10
 
 ### Added
