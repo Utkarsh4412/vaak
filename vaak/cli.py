@@ -19,7 +19,7 @@ import sys
 
 from loguru import logger
 
-from vaak.agent import build_agent
+from vaak.agent import attach_app_endpoints, build_agent
 from vaak.config import load_config
 
 
@@ -116,6 +116,7 @@ def main(argv: list[str] | None = None) -> None:
         stream.fastphone()
     else:
         logger.info(f"Starting web interface on {config.host}:{config.port} …")
+        attach_app_endpoints(stream.ui.app, handler)
         launch_kwargs: dict = {
             "share": config.share,
             "server_name": config.host,
