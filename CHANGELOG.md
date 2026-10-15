@@ -50,10 +50,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Removed
 - `local_voice_chat.py` original implementation (replaced by `vaak.cli`)
 
-### Upstream
-- Forked from [jesuscopado/local-voice-ai-agent](https://github.com/jesuscopado/local-voice-ai-agent) (MIT)
-- LICENSE and upstream attribution preserved
-
 ---
 
 *Previous entries (pre-fork history):*
