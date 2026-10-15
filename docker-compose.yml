@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vaak:latest
+    container_name: vaak-app
+    ports:
+      - "7860:7860"
+    environment:
+      - VAAK_HOST=0.0.0.0
+      - VAAK_PORT=7860
+      - VAAK_LLM_HOST=http://ollama:11434
+      - VAAK_AUTH_TOKEN=${VAAK_AUTH_TOKEN:-}
+    volumes:
+      - model-cache:/root/.cache
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: vaak-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  model-cache:
+  ollama-models:
