@@ -96,6 +96,7 @@ class VoiceHandler:
         session = Session(
             language=cfg.language,
             memory_turns=cfg.memory.memory_turns,
+            summarize_threshold=cfg.memory.summarize_threshold,
         )
         barge_in = BargeInController(session.cancel)
         logger.info(f"New WebRTC connection — Session {session.id!r} lang={session.language!r}")
