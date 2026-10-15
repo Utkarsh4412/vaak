@@ -35,6 +35,10 @@ class TestAgentConfigDefaults:
         cfg = AgentConfig()
         assert cfg.min_silence_ms == 500
 
+    def test_default_max_concurrent_sessions(self):
+        cfg = AgentConfig()
+        assert cfg.max_concurrent_sessions == 4
+
 
 class TestAgentConfigValidation:
     def test_invalid_language_rejected(self):
@@ -80,6 +84,10 @@ class TestAgentConfigValidation:
             AgentConfig(min_silence_ms=50)
         with pytest.raises(ValidationError):
             AgentConfig(min_silence_ms=6000)
+
+    def test_max_concurrent_sessions_must_be_positive(self):
+        with pytest.raises(ValidationError):
+            AgentConfig(max_concurrent_sessions=0)
 
 
 class TestAgentConfigAcceptsValid:
