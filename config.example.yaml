@@ -1,8 +1,16 @@
-model: llama3.2:1b
-max_tokens: 160
-temperature: 0.65
-top_p: 0.9
-memory_turns: 4
+language: en
+stt:
+  backend: moonshine
+llm:
+  model: llama3.2:1b
+  max_tokens: 160
+  temperature: 0.65
+  top_p: 0.9
+memory:
+  memory_turns: 4
+  summarize_threshold: 6
+tts:
+  speed: 1.0
+vad_threshold: 0.5
+min_silence_ms: 500
 system_prompt_file: system_prompt.txt
-
-
