@@ -39,6 +39,14 @@ class TestAgentConfigDefaults:
         cfg = AgentConfig()
         assert cfg.max_concurrent_sessions == 4
 
+    def test_default_auth_token_is_none(self):
+        cfg = AgentConfig()
+        assert cfg.auth_token is None
+
+    def test_default_audit_log_is_false(self):
+        cfg = AgentConfig()
+        assert cfg.audit_log is False
+
 
 class TestAgentConfigValidation:
     def test_invalid_language_rejected(self):

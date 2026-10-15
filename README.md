@@ -94,6 +94,49 @@ You can provide a `config.yaml` file (see `config.example.yaml`) or use CLI flag
 | `--temperature` | Sampling temperature |
 | `--log-level` | Console logging verbosity |
 
+## Docker Deployment Runbook
+
+Deploy the complete stack (vaak app + Ollama) with Docker and Docker Compose:
+
+### 1. Start Services
+```bash
+docker compose up -d
+```
+
+### 2. Pull Language Models into Ollama
+```bash
+docker exec -it vaak-ollama ollama pull llama3.2:1b
+```
+
+### 3. Verify Health & Readiness
+```bash
+# Health check (unconditional liveness)
+curl -s http://localhost:7860/health
+# Response: {"status":"ok"}
+
+# Readiness check (verifies Ollama connectivity)
+curl -s http://localhost:7860/ready
+# Response: {"status":"ready"}
+```
+
+### 4. Configuration via Environment Variables
+
+All settings can be configured via environment variables:
+- `VAAK_AUTH_TOKEN`: Optional Bearer token for API protection. When set, requests must pass `Authorization: Bearer <token>`.
+- `VAAK_HOST`: Listen interface (default `0.0.0.0`).
+- `VAAK_PORT`: Listen port (default `7860`).
+- `VAAK_LLM_HOST`: Ollama server URL (e.g. `http://ollama:11434`).
+- `VAAK_AUDIT_LOG`: Set to `true` to persist audio transcripts (default `false` for privacy).
+- `VAAK_MAX_CONCURRENT`: Maximum concurrent WebRTC sessions (default `4`).
+
+### 5. Graceful Shutdown
+```bash
+docker compose stop
+```
+The application drains in-flight audio turns (up to 5 seconds) before terminating.
+
+
+
 ## Development
 
 Install dev dependencies and pre-commit hooks:

@@ -18,9 +18,13 @@ copy() creates a new Session(uuid4()) for every connection.
 from __future__ import annotations
 
 import threading
+import time
+import urllib.request
 from collections.abc import Generator
 
 import numpy as np
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastrtc import ReplyOnPause, Stream
 from loguru import logger
 
@@ -83,6 +87,8 @@ class VoiceHandler:
             if _semaphore is not None
             else threading.Semaphore(config.max_concurrent_sessions)
         )
+        self._active_turns = 0
+        self._turn_lock = threading.Lock()
 
         # Per-connection state — None on the "template" instance.
         self._session = _session
@@ -98,6 +104,12 @@ class VoiceHandler:
     def barge_in(self) -> BargeInController | None:
         """The active BargeInController for this handler connection, if any."""
         return self._barge_in
+
+    @property
+    def active_turns(self) -> int:
+        """Number of active audio pipeline turns currently processing."""
+        with self._turn_lock:
+            return self._active_turns
 
     # ------------------------------------------------------------------
     # FastRTC protocol: copy() creates a per-connection instance
@@ -173,12 +185,22 @@ class VoiceHandler:
                 )
                 yield make_busy_pcm()
                 return
+            with self._turn_lock:
+                self._active_turns += 1
             try:
                 yield from self._pipeline.run(self._session, audio)
             finally:
+                with self._turn_lock:
+                    self._active_turns -= 1
                 self._semaphore.release()
         else:
-            yield from self._pipeline.run(self._session, audio)
+            with self._turn_lock:
+                self._active_turns += 1
+            try:
+                yield from self._pipeline.run(self._session, audio)
+            finally:
+                with self._turn_lock:
+                    self._active_turns -= 1
 
     # ------------------------------------------------------------------
     # FastRTC Stream builder
@@ -264,3 +286,60 @@ def build_agent(config: AgentConfig) -> VoiceHandler:
     handler = VoiceHandler(config, _stt=stt, _llm=llm, _tts=tts)
     logger.info("vaak agent ready.")
     return handler
+
+
+def attach_app_endpoints(app: FastAPI, handler: VoiceHandler) -> None:
+    """Attach health, readiness, auth middleware, and shutdown hooks to a FastAPI app."""
+    config = handler._config
+
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        token = config.auth_token
+        public_paths = {"/health", "/ready", "/docs", "/openapi.json", "/redoc"}
+        if token and request.url.path not in public_paths:
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return JSONResponse(status_code=401, content={"error": "unauthorized"})
+            req_token = auth_header[len("Bearer ") :].strip()
+            if req_token != token:
+                return JSONResponse(status_code=401, content={"error": "unauthorized"})
+        return await call_next(request)
+
+    @app.get("/health")
+    def health_check() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/ready")
+    def ready_check() -> JSONResponse:
+        ollama_host = config.llm.ollama_host.rstrip("/")
+        tags_url = f"{ollama_host}/api/tags"
+        try:
+            req = urllib.request.Request(tags_url)
+            with urllib.request.urlopen(req, timeout=2.0) as resp:
+                if resp.status == 200:
+                    return JSONResponse(status_code=200, content={"status": "ready"})
+                return JSONResponse(
+                    status_code=503,
+                    content={"status": "not ready", "error": f"ollama returned {resp.status}"},
+                )
+        except Exception as exc:
+            return JSONResponse(
+                status_code=503,
+                content={"status": "not ready", "error": f"ollama check failed: {exc}"},
+            )
+
+    @app.on_event("shutdown")
+    def shutdown_event() -> None:
+        """Gracefully drain active turns up to 5 seconds."""
+        deadline = time.monotonic() + 5.0
+        while handler.active_turns > 0 and time.monotonic() < deadline:
+            time.sleep(0.1)
+
+
+def create_app(handler: VoiceHandler) -> FastAPI:
+    """Create FastAPI application with health checks, auth middleware, and WebRTC stream."""
+    app = FastAPI(title="vaak voice agent", version="0.5.0")
+    attach_app_endpoints(app, handler)
+    stream = handler.build_stream()
+    stream.mount(app)
+    return app

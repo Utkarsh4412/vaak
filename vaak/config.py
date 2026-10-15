@@ -144,6 +144,13 @@ class AgentConfig(BaseModel):
     max_concurrent_sessions: int = Field(default=4, ge=1)
     """Maximum concurrent WebRTC sessions before serving a busy response."""
 
+    # Auth & Security
+    auth_token: str | None = None
+    """Bearer token for API authorization. If None/empty, auth is disabled (local dev mode)."""
+
+    audit_log: bool = False
+    """Whether to write raw audio/transcripts to disk. Default is False (privacy by design)."""
+
     @model_validator(mode="after")
     def _load_system_prompt_file(self) -> AgentConfig:
         if self.system_prompt_file:
@@ -172,6 +179,9 @@ def _env_overrides() -> dict:
         "VAAK_HOST": ("host",),
         "VAAK_PORT": ("port",),
         "VAAK_SHARE": ("share",),
+        "VAAK_AUTH_TOKEN": ("auth_token",),
+        "VAAK_AUDIT_LOG": ("audit_log",),
+        "VAAK_MAX_CONCURRENT": ("max_concurrent_sessions",),
         "VAAK_LLM_MODEL": ("llm", "model"),
         "VAAK_LLM_HOST": ("llm", "ollama_host"),
         "VAAK_LLM_ERROR_REPLY": ("llm_error_reply",),
@@ -185,9 +195,9 @@ def _env_overrides() -> dict:
         if val is None:
             continue
         # Parse booleans and ints where needed
-        if env_key in {"VAAK_PORT", "VAAK_MEMORY_TURNS"}:
+        if env_key in {"VAAK_PORT", "VAAK_MEMORY_TURNS", "VAAK_MAX_CONCURRENT"}:
             val = int(val)  # type: ignore[assignment]
-        elif env_key in {"VAAK_SHARE"}:
+        elif env_key in {"VAAK_SHARE", "VAAK_AUDIT_LOG"}:
             val = val.lower() in {"1", "true", "yes"}  # type: ignore[assignment]
         elif env_key == "VAAK_TTS_SPEED":
             val = float(val)  # type: ignore[assignment]
