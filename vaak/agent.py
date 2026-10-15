@@ -17,8 +17,10 @@ copy() creates a new Session(uuid4()) for every connection.
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Generator
 
+import numpy as np
 from fastrtc import ReplyOnPause, Stream
 from loguru import logger
 
@@ -34,6 +36,14 @@ from vaak.stt.moonshine import MoonshineSTT
 from vaak.tts.kokoro import KokoroTTS
 
 
+def make_busy_pcm(sample_rate: int = 24000, duration_s: float = 0.5) -> tuple[int, np.ndarray]:
+    """Generate a short pulsed dual-frequency busy tone (480Hz + 620Hz) as PCM audio."""
+    t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False, dtype=np.float32)
+    tone = 0.2 * np.sin(2 * np.pi * 480 * t) + 0.2 * np.sin(2 * np.pi * 620 * t)
+    mask = (t % 0.25) < 0.12
+    return sample_rate, (tone * mask).astype(np.float32)
+
+
 class VoiceHandler:
     """FastRTC-compatible audio handler.
 
@@ -47,6 +57,7 @@ class VoiceHandler:
         _session: Internal; set by copy(). Do not pass externally.
         _pipeline: Internal; set by copy(). Do not pass externally.
         _barge_in: Internal; set by copy(). Do not pass externally.
+        _semaphore: Internal; concurrency limit semaphore shared across copies.
     """
 
     def __init__(
@@ -59,6 +70,7 @@ class VoiceHandler:
         _session: Session | None = None,
         _pipeline: Pipeline | None = None,
         _barge_in: BargeInController | None = None,
+        _semaphore: threading.Semaphore | None = None,
     ) -> None:
         self._config = config
 
@@ -66,6 +78,11 @@ class VoiceHandler:
         self._stt = _stt
         self._llm = _llm
         self._tts = _tts
+        self._semaphore = (
+            _semaphore
+            if _semaphore is not None
+            else threading.Semaphore(config.max_concurrent_sessions)
+        )
 
         # Per-connection state — None on the "template" instance.
         self._session = _session
@@ -121,6 +138,7 @@ class VoiceHandler:
             _session=session,
             _pipeline=pipeline,
             _barge_in=barge_in,
+            _semaphore=self._semaphore,
         )
 
     # ------------------------------------------------------------------
@@ -145,7 +163,22 @@ class VoiceHandler:
             # Safety net: should never be called on the template instance.
             logger.error("VoiceHandler.__call__ on template (no session). Skipping.")
             return
-        yield from self._pipeline.run(self._session, audio)
+
+        if self._semaphore is not None:
+            acquired = self._semaphore.acquire(blocking=False)
+            if not acquired:
+                logger.warning(
+                    f"Max concurrent sessions ({self._config.max_concurrent_sessions}) reached; "
+                    "yielding busy response."
+                )
+                yield make_busy_pcm()
+                return
+            try:
+                yield from self._pipeline.run(self._session, audio)
+            finally:
+                self._semaphore.release()
+        else:
+            yield from self._pipeline.run(self._session, audio)
 
     # ------------------------------------------------------------------
     # FastRTC Stream builder

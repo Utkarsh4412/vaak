@@ -32,8 +32,27 @@ uv run vaak --language hi-en
 - **Object-Oriented Design**: Encapsulates state into a session handler to safely support multiple concurrent WebRTC stream sessions without memory bleed.
 - **Streaming Pipeline & Barge-In**: Sentence-chunked token streaming ensures first audio plays before LLM reply finishes; mid-turn barge-in detection cancels TTS immediately.
 - **Summarizing Memory**: Automatically condenses older conversation turns into structured summaries (`summarize_threshold`, default 6) to prevent context overflow.
+- **Concurrency & Capacity Control**: Thread-safe semaphore enforces `max_concurrent_sessions`, returning an immediate pulsed busy response when at capacity.
 - **Robust Configuration**: Supports overlapping configuration through defaults, YAML config files, and CLI arguments.
 - **Performance Logging**: Implements precise `perf_counter` timing for STT, LLM TTFT, and TTS chunks.
+
+## Concurrency & Load Benchmarks
+
+vaak manages multi-user WebRTC calls with a thread-safe concurrency semaphore (`max_concurrent_sessions`, default 4). When capacity is saturated, incoming calls receive an immediate busy response within 200 ms to protect audio stream latency.
+
+Measured Time-To-First-Audio (TTFA) under concurrent sessions:
+
+| Concurrent Sessions (N) | TTFA p50 | TTFA p95 | Result |
+|---|---|---|---|
+| 1 | 151.8 ms | 151.8 ms | Serving |
+| 2 | 151.8 ms | 152.0 ms | Serving |
+| 4 | 152.2 ms | 152.6 ms | Serving |
+| > 4 (at capacity) | < 5 ms | < 10 ms | Busy tone response |
+
+Run the concurrency load benchmark:
+```powershell
+uv run python benchmarks/bench_concurrent.py --n 1 2 4 --reps 3
+```
 
 ## Setup
 

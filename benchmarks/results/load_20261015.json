@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-10-15T18:16:11.433098+00:00",
+  "hardware": {
+    "os": "Windows 11",
+    "cpu": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "cores": 12,
+    "python": "3.12.13",
+    "ollama_version": "Warning: could not connect to a running Ollama instance\nWarning: client version is 0.23.1"
+  },
+  "load_levels": {
+    "1": {
+      "p50_ms": 151.77280000352766,
+      "p95_ms": 151.8138400017051,
+      "min_ms": 151.18790000269655,
+      "max_ms": 151.8184000015026
+    },
+    "2": {
+      "p50_ms": 151.77495000170893,
+      "p95_ms": 152.02724999835482,
+      "min_ms": 151.19740000227466,
+      "max_ms": 152.0329999984824
+    },
+    "4": {
+      "p50_ms": 152.15415000056964,
+      "p95_ms": 152.5820700037002,
+      "min_ms": 151.67420000216225,
+      "max_ms": 152.60440000565723
+    }
+  }
+}

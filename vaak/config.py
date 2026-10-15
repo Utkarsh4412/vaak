@@ -140,6 +140,10 @@ class AgentConfig(BaseModel):
     min_silence_ms: int = Field(default=500, ge=100, le=5000)
     """Minimum silence duration in ms before VAD fires end-of-speech."""
 
+    # Concurrency
+    max_concurrent_sessions: int = Field(default=4, ge=1)
+    """Maximum concurrent WebRTC sessions before serving a busy response."""
+
     @model_validator(mode="after")
     def _load_system_prompt_file(self) -> AgentConfig:
         if self.system_prompt_file:

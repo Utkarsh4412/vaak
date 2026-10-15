@@ -15,6 +15,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Automatic Hinglish (`hi-en`) prompt injection for conversational bilingual responses.
 - Language mapping resolution for Hindi and Hinglish TTS voices.
 - End-to-end integration tests for multilingual Hindi and Hinglish pipeline turns.
+- `max_concurrent_sessions` configuration and thread-safe semaphore in `VoiceHandler`.
+- Immediate pulsed dual-tone busy PCM response when concurrency capacity is exceeded.
+- Concurrency load benchmark script `benchmarks/bench_concurrent.py` measuring TTFA across concurrent sessions.
+- Integration tests for capacity limit enforcement and fast busy response.
 
 ## [0.1.0] - 2026-10-10
 
