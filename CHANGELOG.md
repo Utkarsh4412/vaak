@@ -3,7 +3,28 @@
 All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
+## [0.5.0] - 2026-10-16
+
+### Added
+- Multi-stage `Dockerfile` with `uv` and slim Python 3.12 runtime.
+- `docker-compose.yml` for unified deployment with Ollama and shared model volume.
+- FastAPI endpoints for `/health` (liveness) and `/ready` (dependency check).
+- Bearer-token authentication middleware configured via `VAAK_AUTH_TOKEN`.
+- Graceful shutdown draining active turns up to 5 seconds.
+- Docker deployment runbook in `README.md`.
+
+### Security
+- Privacy-by-design defaults: raw audio and transcripts disabled on disk (`audit_log: false`).
+
+## [0.4.0] - 2026-10-15
+
+### Added
+- `max_concurrent_sessions` configuration and thread-safe semaphore in `VoiceHandler`.
+- Immediate pulsed dual-tone busy PCM response when concurrency capacity is exceeded.
+- Concurrency load benchmark script `benchmarks/bench_concurrent.py` measuring TTFA across concurrent sessions.
+- Integration tests for capacity limit enforcement and fast busy response.
+
+## [0.3.0] - 2026-10-15
 
 ### Added
 - `BargeInController`: thread-safe coordinator for mid-reply cancellation.
@@ -15,17 +36,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Automatic Hinglish (`hi-en`) prompt injection for conversational bilingual responses.
 - Language mapping resolution for Hindi and Hinglish TTS voices.
 - End-to-end integration tests for multilingual Hindi and Hinglish pipeline turns.
-- `max_concurrent_sessions` configuration and thread-safe semaphore in `VoiceHandler`.
-- Immediate pulsed dual-tone busy PCM response when concurrency capacity is exceeded.
-- Concurrency load benchmark script `benchmarks/bench_concurrent.py` measuring TTFA across concurrent sessions.
-- Integration tests for capacity limit enforcement and fast busy response.
-- Multi-stage `Dockerfile` with `uv` and slim Python 3.12 runtime.
-- `docker-compose.yml` for unified deployment with Ollama and shared model volume.
-- FastAPI endpoints for `/health` (liveness) and `/ready` (dependency check).
-- Bearer-token authentication middleware configured via `VAAK_AUTH_TOKEN`.
-- Graceful shutdown draining active turns up to 5 seconds.
-- Privacy-by-design defaults: raw audio and transcripts disabled on disk (`audit_log: false`).
-- Docker deployment runbook in `README.md`.
+
+## [0.2.0] - 2026-10-15
+
+### Added
+- Token streaming in `OllamaLLM` with `stream=True`.
+- `sentence_chunker` generator splitting token streams at punctuation boundaries.
+- Sentence-chunked TTS synthesis yielding first audio before LLM completes response.
+- `FasterWhisperSTT` adapter with int8 quantization for Hindi, Hinglish, Spanish, and French.
+- `LangDetectRouter` dynamically selecting Moonshine or FasterWhisper based on session language.
+- Integration tests for streaming pipeline and Hindi transcription.
 
 
 ## [0.1.0] - 2026-10-10
