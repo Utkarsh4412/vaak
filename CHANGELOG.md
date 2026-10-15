@@ -19,6 +19,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Immediate pulsed dual-tone busy PCM response when concurrency capacity is exceeded.
 - Concurrency load benchmark script `benchmarks/bench_concurrent.py` measuring TTFA across concurrent sessions.
 - Integration tests for capacity limit enforcement and fast busy response.
+- Multi-stage `Dockerfile` with `uv` and slim Python 3.12 runtime.
+- `docker-compose.yml` for unified deployment with Ollama and shared model volume.
+- FastAPI endpoints for `/health` (liveness) and `/ready` (dependency check).
+- Bearer-token authentication middleware configured via `VAAK_AUTH_TOKEN`.
+- Graceful shutdown draining active turns up to 5 seconds.
+- Privacy-by-design defaults: raw audio and transcripts disabled on disk (`audit_log: false`).
+- Docker deployment runbook in `README.md`.
+
 
 ## [0.1.0] - 2026-10-10
 
