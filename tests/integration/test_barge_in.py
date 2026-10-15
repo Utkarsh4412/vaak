@@ -140,3 +140,43 @@ def test_build_stream_options() -> None:
     handler = VoiceHandler(cfg, _stt=DummySTT(), _llm=SlowStreamingLLM(["hi"]), _tts=SlowTTS())
     stream = handler.build_stream()
     assert stream is not None
+
+
+def test_max_concurrent_sessions_busy_response() -> None:
+    """Verify that exceeding max_concurrent_sessions returns busy PCM response within 200ms."""
+    cfg = AgentConfig(max_concurrent_sessions=1)
+    template = VoiceHandler(
+        cfg,
+        _stt=DummySTT(),
+        _llm=SlowStreamingLLM(["Active session conversation."]),
+        _tts=SlowTTS(chunk_delay_s=0.08),
+    )
+
+    handler_1 = template.copy()
+    handler_2 = template.copy()
+    dummy_audio = (16000, np.zeros(1600, dtype=np.float32))
+
+    started = threading.Event()
+
+    def run_first() -> None:
+        started.set()
+        list(handler_1(dummy_audio))
+
+    t = threading.Thread(target=run_first)
+    t.start()
+    started.wait()
+    time.sleep(0.02)  # ensure handler_1 is inside pipeline.run holding semaphore
+
+    # Handler 2 attempts to run while Handler 1 is executing
+    t0 = time.perf_counter()
+    chunks_2 = list(handler_2(dummy_audio))
+    latency_ms = (time.perf_counter() - t0) * 1000.0
+
+    # Must return immediately (< 200 ms) with busy tone
+    assert latency_ms < 200.0
+    assert len(chunks_2) == 1
+    sr, pcm = chunks_2[0]
+    assert sr == 24000
+    assert isinstance(pcm, np.ndarray)
+
+    t.join(timeout=3.0)
