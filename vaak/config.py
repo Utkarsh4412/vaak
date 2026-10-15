@@ -54,6 +54,7 @@ _LANG_TO_DEFAULT_VOICE: dict[str, str] = {
     "en": "af_heart",  # American English female
     "en-gb": "bf_emma",  # British English female
     "hi": "hf_alpha",  # Hindi female
+    "hi-en": "hf_alpha",  # Hinglish (uses Hindi voice)
     "es": "ef_dora",  # Spanish female
     "fr": "ff_siwis",  # French female
 }
@@ -91,6 +92,9 @@ class TTSConfig(BaseModel):
 class MemoryConfig(BaseModel):
     memory_turns: int = Field(default=4, ge=0)
     """Number of conversation turns to keep in the rolling deque (0 = no memory)."""
+
+    summarize_threshold: int = Field(default=6, ge=0)
+    """Turn count at which automatic summarization triggers (0 = disabled)."""
 
 
 # ---------------------------------------------------------------------------

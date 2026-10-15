@@ -183,6 +183,10 @@ class KokoroTTS(BaseTTS):
     # Helpers
     # ------------------------------------------------------------------
 
+    def resolve_voice(self, language: str) -> str:
+        """Public helper to resolve the voice ID for *language*."""
+        return self._resolve_voice(language)
+
     def _resolve_voice(self, language: str) -> str:
         """Return the voice ID to use for *language*."""
         if self._voice_override:
