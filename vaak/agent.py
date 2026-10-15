@@ -22,6 +22,7 @@ from collections.abc import Generator
 from fastrtc import ReplyOnPause, Stream
 from loguru import logger
 
+from vaak.barge_in import BargeInController
 from vaak.config import AgentConfig
 from vaak.interfaces import BaseLLM, BaseSTT, BaseTTS
 from vaak.llm.ollama import OllamaLLM
@@ -45,6 +46,7 @@ class VoiceHandler:
         config: Validated AgentConfig.
         _session: Internal; set by copy(). Do not pass externally.
         _pipeline: Internal; set by copy(). Do not pass externally.
+        _barge_in: Internal; set by copy(). Do not pass externally.
     """
 
     def __init__(
@@ -56,6 +58,7 @@ class VoiceHandler:
         _tts: BaseTTS | None = None,
         _session: Session | None = None,
         _pipeline: Pipeline | None = None,
+        _barge_in: BargeInController | None = None,
     ) -> None:
         self._config = config
 
@@ -67,6 +70,17 @@ class VoiceHandler:
         # Per-connection state — None on the "template" instance.
         self._session = _session
         self._pipeline = _pipeline
+        self._barge_in = _barge_in
+
+    @property
+    def session(self) -> Session | None:
+        """The active Session for this handler connection, if any."""
+        return self._session
+
+    @property
+    def barge_in(self) -> BargeInController | None:
+        """The active BargeInController for this handler connection, if any."""
+        return self._barge_in
 
     # ------------------------------------------------------------------
     # FastRTC protocol: copy() creates a per-connection instance
@@ -83,6 +97,7 @@ class VoiceHandler:
             language=cfg.language,
             memory_turns=cfg.memory.memory_turns,
         )
+        barge_in = BargeInController(session.cancel)
         logger.info(f"New WebRTC connection — Session {session.id!r} lang={session.language!r}")
         assert self._stt is not None
         assert self._llm is not None
@@ -104,11 +119,24 @@ class VoiceHandler:
             _tts=self._tts,
             _session=session,
             _pipeline=pipeline,
+            _barge_in=barge_in,
         )
 
     # ------------------------------------------------------------------
     # FastRTC protocol: __call__ handles each audio segment
     # ------------------------------------------------------------------
+
+    def handle_barge_in(self) -> bool:
+        """Handle incoming speech during synthesis (barge-in).
+
+        If the agent is currently speaking, requests pipeline cancellation and
+        returns True. Returns False if agent was not speaking (not a barge-in).
+        """
+        if self._session is not None and self._session.is_speaking and self._barge_in is not None:
+            logger.info(f"Barge-in triggered for session {self._session.id}")
+            self._barge_in.request_cancel()
+            return True
+        return False
 
     def __call__(self, audio: tuple[int, object]) -> Generator[tuple[int, object], None, None]:
         """Process one audio segment — called by ReplyOnPause after VAD fires."""
@@ -124,8 +152,23 @@ class VoiceHandler:
 
     def build_stream(self) -> Stream:
         """Create and return the FastRTC Stream using ReplyOnPause."""
+        model_options = None
+        try:
+            from fastrtc.pause_detection.silero import SileroVadOptions
+
+            model_options = SileroVadOptions(
+                threshold=self._config.vad_threshold,
+                min_silence_duration_ms=self._config.min_silence_ms,
+            )
+        except Exception as exc:
+            logger.warning(f"Could not initialize SileroVadOptions: {exc}")
+
         return Stream(
-            ReplyOnPause(self),  # type: ignore[arg-type]
+            ReplyOnPause(
+                self,  # type: ignore[arg-type]
+                model_options=model_options,
+                can_interrupt=True,
+            ),
             modality="audio",
             mode="send-receive",
         )
