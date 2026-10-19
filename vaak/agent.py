@@ -126,6 +126,7 @@ class VoiceHandler:
             language=cfg.language,
             memory_turns=cfg.memory.memory_turns,
             summarize_threshold=cfg.memory.summarize_threshold,
+            llm=self._llm,
         )
         barge_in = BargeInController(session.cancel)
         logger.info(f"New WebRTC connection — Session {session.id!r} lang={session.language!r}")
@@ -141,6 +142,7 @@ class VoiceHandler:
             temperature=cfg.llm.temperature,
             top_p=cfg.llm.top_p,
             llm_error_reply=cfg.llm_error_reply,
+            audit_log=cfg.audit_log,
         )
         return VoiceHandler(
             cfg,

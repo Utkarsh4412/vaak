@@ -12,9 +12,13 @@ from __future__ import annotations
 
 import threading
 from collections import deque
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from vaak.memory import SummarizingMemory
+
+if TYPE_CHECKING:
+    from vaak.interfaces import BaseLLM
 
 HINGLISH_INSTRUCTION: str = (
     "Please reply in Hinglish (a natural blend of Hindi and English written in Latin script). "
@@ -44,6 +48,7 @@ class Session:
         memory_turns: int = 4,
         summarize_threshold: int = 6,
         memory: SummarizingMemory | None = None,
+        llm: BaseLLM | None = None,
     ) -> None:
         self.id: str = str(uuid4())
         self.language: str = language
@@ -53,6 +58,7 @@ class Session:
             else SummarizingMemory(
                 memory_turns=memory_turns,
                 summarize_threshold=summarize_threshold,
+                llm=llm,
             )
         )
         self.cancel: threading.Event = threading.Event()
