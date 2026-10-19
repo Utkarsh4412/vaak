@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [Unreleased]
+
+### Added
+- Audit logging support in `Pipeline` and `VoiceHandler` via `audit_log` setting.
+- Backwards-compatible `local_voice_chat.py` CLI shim.
+- Unit tests for CLI entrypoint and audit logging.
+- Multilingual benchmark WAV fixtures in `benchmarks/fixtures/` (en, hi, hi_en).
+- Benchmark reports for baseline, streaming, and model evaluation in `benchmarks/results/`.
+
+### Fixed
+- Pass LLM instance to `SummarizingMemory` via `Session` in `VoiceHandler.copy()`.
+- Enhanced `bench_pipeline.py` with multi-language and streaming mode options.
+
 ## [0.5.0] - 2026-10-16
 
 ### Added

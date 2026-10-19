@@ -15,9 +15,11 @@ The cancel event is checked between TTS chunks to support barge-in.
 
 from __future__ import annotations
 
+import json
 import re
 import time
 from collections.abc import Callable, Generator, Iterable
+from pathlib import Path
 
 from loguru import logger
 
@@ -92,6 +94,8 @@ class Pipeline:
         llm_error_reply: str = "I'm having trouble thinking right now. Please try again later.",
         on_report: Callable[[LatencyReport], None] | None = None,
         streaming: bool = True,
+        audit_log: bool = False,
+        audit_log_path: str = "audit.log",
     ) -> None:
         self._stt = stt
         self._llm = llm
@@ -103,6 +107,8 @@ class Pipeline:
         self._llm_error_reply = llm_error_reply
         self._on_report = on_report
         self._streaming = streaming
+        self._audit_log = audit_log
+        self._audit_log_path = audit_log_path
 
     # ------------------------------------------------------------------
     # Main entry point
@@ -363,3 +369,22 @@ class Pipeline:
                 log.info(f"Turn metrics: {report.to_json()}")
                 if self._on_report:
                     self._on_report(report)
+
+                if self._audit_log:
+                    try:
+                        record = {
+                            "timestamp": time.time(),
+                            "session_id": session.id,
+                            "language": session.language,
+                            "user_text": user_text,
+                            "reply_text": reply_text,
+                            "completed": completed,
+                            "cancelled": cancelled,
+                            "llm_failed": llm_failed,
+                            "metrics": report.to_dict(),
+                        }
+                        Path(self._audit_log_path).parent.mkdir(parents=True, exist_ok=True)
+                        with open(self._audit_log_path, "a", encoding="utf-8") as f:
+                            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    except Exception as exc:
+                        log.error(f"Failed to write audit log: {exc}")

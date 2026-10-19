@@ -111,3 +111,11 @@ class TestSessionCancel:
             t.join()
 
         assert not errors
+
+    def test_session_passes_llm_to_memory(self):
+        class DummyLLM:
+            pass
+
+        dummy_llm = DummyLLM()
+        s = Session(llm=dummy_llm)  # type: ignore[arg-type]
+        assert s.memory.llm is dummy_llm

@@ -393,3 +393,29 @@ class TestSentenceChunker:
         from vaak.pipeline import sentence_chunker
 
         assert list(sentence_chunker([])) == []
+
+
+class TestAuditLog:
+    def test_audit_log_written_when_enabled(self, tmp_path):
+        import json
+
+        log_path = tmp_path / "test_audit.log"
+        p = _make_pipeline(audit_log=True, audit_log_path=str(log_path))
+        _run(p)
+
+        assert log_path.exists()
+        lines = log_path.read_text(encoding="utf-8").strip().splitlines()
+        assert len(lines) == 1
+        record = json.loads(lines[0])
+        assert record["user_text"] == "hello"
+        assert record["reply_text"] == "world"
+        assert record["completed"] is True
+        assert record["cancelled"] is False
+        assert "metrics" in record
+
+    def test_audit_log_not_written_when_disabled(self, tmp_path):
+        log_path = tmp_path / "test_audit.log"
+        p = _make_pipeline(audit_log=False, audit_log_path=str(log_path))
+        _run(p)
+
+        assert not log_path.exists()
